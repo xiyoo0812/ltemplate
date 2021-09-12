@@ -6,7 +6,7 @@
 - `{{%= lua_variable %}}` 使用lua变量替换此内容
 
 # 嵌入式用法
-```
+```lua
 local ltmpl = require "ltemplate"
 
 local tpl = [[
@@ -37,7 +37,7 @@ Here are your items:
 
 # 工具式用法
 
-```
+```shell
 --------------------------------------------------------
 --test.tpl
 Hello {{%= name %}},
