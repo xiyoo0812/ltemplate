@@ -176,17 +176,22 @@ local function render_file(tpl, tpl_out, tpl_env)
     end
     local content = template_file:read("*all")
     template_file:close()
-    local env = { name = tpl }
-    local func, err = loadfile(tpl_env, "bt", env)
-    if not func then
-        error(sformat("open template variable file %s failed :%s", tpl_env, err))
-        return
+    local env = { }
+    if type(tpl_env) == "string" then
+        local func, err = loadfile(tpl_env, "bt", env)
+        if not func then
+            error(sformat("open template variable file %s failed :%s", tpl_env, err))
+            return
+        end
+        local ok, res = pcall(func)
+        if not ok then
+            error(sformat("load template variable file %s failed :%s", tpl_env, res))
+            return
+        end
+    else
+        env = tpl_env
     end
-    local ok, res = pcall(func)
-    if not ok then
-        error(sformat("load template variable file %s failed :%s", tpl_env, res))
-        return
-    end
+    env.name = tpl
     local out_file = iopen(tpl_out, "w")
     if not out_file then
         error(sformat("open template out file %s failed!", tpl_out))
@@ -202,6 +207,7 @@ local function render_file(tpl, tpl_out, tpl_env)
     out_file:write(template)
     out_file:close()
     print(sformat("render template file %s to %s success!", tpl, tpl_out))
+    return env
 end
 
 --工具用法
