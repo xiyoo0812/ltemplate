@@ -32,10 +32,27 @@ local function pos_to_line(content, pos)
     return line
 end
 
+local function error_for_line(code, source_line_no, err_msg)
+    local source_line = get_line(code, source_line_no)
+    return sformat("%s <[%s]: %s>", err_msg, source_line_no, source_line)
+end
+
 local function error_for_pos(code, source_pos, err_msg)
     local source_line_no = pos_to_line(code, source_pos)
-    local source_line = get_line(code, source_line_no)
-    return sformat("%s [%s]: %s", err_msg, source_line_no, source_line)
+    return error_for_line(code, source_line_no, err_msg)
+end
+
+local function parse_error(code, err)
+    local line_no, err_msg = err:match("%[.-%]:(%d+): (.*)$")
+    if line_no then
+        local err_res
+        local line = get_line(code, tonumber(line_no))
+        local source_line_no = tonumber(err:match("line (%d+)"))
+        if source_line_no then
+            err_res = error_for_line(code, tonumber(source_line_no), err_msg)
+        end
+        return sformat("%s <[%s]: %s>", err_res or err_msg, line_no, line)
+    end
 end
 
 local function push_token(buffers, ...)
@@ -115,9 +132,9 @@ local function parse(content)
 end
 
 local function load_chunk(chunk_code, env)
-    local fn, err = load(chunk_code, "template", "bt", env)
+    local fn, err = load(chunk_code, env.name, "bt", env)
     if not fn then
-        return nil, err
+        return nil, parse_error(chunk_code, err)
     end
     return fn
 end
@@ -134,13 +151,13 @@ local function render(content, env)
     setmetatable(env, { __index = function(t, k) return _G[k] end })
     local fn, err2 = load_chunk(chunk, env)
     if not fn then
-        return nil, err2
+        return nil, err2, chunk
     end
-    local buffer, err = fn()
-    if buffer then
+    local ok, buffer, err = pcall(fn)
+    if ok and buffer then
         return tconcat(buffer)
     end
-    return nil, err
+    return nil, buffer or err, chunk
 end
 
 --导出文件模板
@@ -159,7 +176,7 @@ local function render_file(tpl, tpl_out, tpl_env)
     end
     local content = template_file:read("*all")
     template_file:close()
-    local env = {}
+    local env = { name = tpl }
     local func, err = loadfile(tpl_env, "bt", env)
     if not func then
         error(sformat("open template variable file %s failed :%s", tpl_env, err))
@@ -170,14 +187,16 @@ local function render_file(tpl, tpl_out, tpl_env)
         error(sformat("load template variable file %s failed :%s", tpl_env, res))
         return
     end
-    local template, err = render(content, env)
-    if not template then
-        error(sformat("render template file %s failed: %s", tpl, err))
-        return
-    end
     local out_file = iopen(tpl_out, "w")
     if not out_file then
         error(sformat("open template out file %s failed!", tpl_out))
+        return
+    end
+    local template, err, chunk = render(content, env)
+    if not template then
+        out_file:write(chunk)
+        out_file:close()
+        error(sformat("render template file %s failed: %s", tpl, err))
         return
     end
     out_file:write(template)
