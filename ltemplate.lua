@@ -44,6 +44,9 @@ end
 
 local function parse_error(code, err)
     local line_no, err_msg = err:match("%[.-%]:(%d+): (.*)$")
+    if not line_no then
+        line_no, err_msg = err:match(".:(%d+): (.*)$")
+    end
     if line_no then
         local err_res
         local line = get_line(code, tonumber(line_no))
@@ -145,19 +148,22 @@ end
 local function render(content, env)
     local chunks, err = parse(sgsub(content, "\r\n", "\n"))
     if not chunks then
-        return nil, err
+        error(sformat("parse content failed: %s", err))
+        return nil
     end
     local chunk = compile_chunks(chunks)
     setmetatable(env, { __index = function(t, k) return _G[k] end })
     local fn, err2 = load_chunk(chunk, env)
     if not fn then
-        return nil, err2, chunk
+        print(sformat("load_chunk content failed: %s", err2))
+        return nil, chunk
     end
-    local ok, buffer, err = pcall(fn)
+    local ok, buffer = pcall(fn)
     if ok and buffer then
         return tconcat(buffer)
     end
-    return nil, buffer or err, chunk
+    print(sformat("pcall content failed: %s", buffer))
+    return nil, chunk
 end
 
 --导出文件模板
@@ -178,6 +184,7 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
     local content = template_file:read("*all")
     template_file:close()
     if tpl_var_f then
+        setmetatable(tpl_env, { __index = function(t, k) return _G[k] end })
         local func, err = loadfile(tpl_var_f, "bt", tpl_env)
         if not func then
             error(sformat("open template variable file %s failed :%s", tpl_var_f, err))
@@ -189,17 +196,19 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
             return
         end
         tpl_env.name = tpl
+    end
         local out_file = iopen(tpl_out_f, "w")
         if not out_file then
             error(sformat("open template out file %s failed!", tpl_out_f))
             return
         end
-    end
-    local template, err, chunk = render(content, tpl_env)
-    if not template then
-        out_file:write(chunk)
+    local ok, template, chunk = pcall(render, content, tpl_env)
+    if not ok or not template then
+        if chunk then
+            out_file:write(chunk)
+        end
         out_file:close()
-        error(sformat("render template file %s failed: %s", tpl_f, err))
+        error(sformat("render template file %s to %s failed!", tpl_f, tpl_out_f))
         return
     end
     out_file:write(template)
@@ -209,7 +218,7 @@ end
 
 --工具用法
 if select("#", ...) == 3 then
-    local tpl_f, tpl_out_f, tpl_var_f = select(1, )
+    local tpl_f, tpl_out_f, tpl_var_f = select(1, ...)
     render_file(tpl_f, tpl_out_f, {}, tpl_var_f)
 end
 
