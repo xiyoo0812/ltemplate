@@ -48,12 +48,12 @@ Here are your items:
 --------------------------------------------------------
 
 --------------------------------------------------------
---test.env
+--test.var
 name = "leafo"
 items = { "Shoe", "Reflector", "Scarf" }
 --------------------------------------------------------
 
-./lua.exe ltemplate.lua test.tpl test.out test.env
+./lua.exe ltemplate.lua test.tpl test.out test.var
 
 --------------------------------------------------------
 Hello leafo,

@@ -140,8 +140,8 @@ local function load_chunk(chunk_code, env)
 end
 
 --替换字符串模板
---content：字符串模板
---env：环境变量(包含自定义参数)
+--content: 字符串模板
+--env: 环境变量(包含自定义参数)
 local function render(content, env)
     local chunks, err = parse(sgsub(content, "\r\n", "\n"))
     if not chunks then
@@ -161,58 +161,56 @@ local function render(content, env)
 end
 
 --导出文件模板
---tpl：文件模板
---tpl_out：输出文件
---tpl_env：环境变量文件(包含自定义参数)
-local function render_file(tpl, tpl_out, tpl_env)
-    if not tpl or not tpl_out or not tpl_env then
+--tpl_f: 文件模板
+--tpl_out_f: 输出文件
+--tpl_env: 环境变量
+--tpl_var_f: 环境变量文件
+local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
+    if not tpl_f or not tpl_out_f or not tpl_env then
         error("render template file params error!")
         return
     end
-    local template_file = iopen(tpl, "rb")
+    local template_file = iopen(tpl_f, "rb")
     if not template_file then
         error(sformat("open template file %s failed!", tpl))
         return
     end
     local content = template_file:read("*all")
     template_file:close()
-    local env = { }
-    if type(tpl_env) == "string" then
-        local func, err = loadfile(tpl_env, "bt", env)
+    if tpl_var_f then
+        local func, err = loadfile(tpl_var_f, "bt", tpl_env)
         if not func then
-            error(sformat("open template variable file %s failed :%s", tpl_env, err))
+            error(sformat("open template variable file %s failed :%s", tpl_var_f, err))
             return
         end
         local ok, res = pcall(func)
         if not ok then
-            error(sformat("load template variable file %s failed :%s", tpl_env, res))
+            error(sformat("load template variable file %s failed :%s", tpl_var_f, res))
             return
         end
-    else
-        env = tpl_env
+        tpl_env.name = tpl
+        local out_file = iopen(tpl_out_f, "w")
+        if not out_file then
+            error(sformat("open template out file %s failed!", tpl_out_f))
+            return
+        end
     end
-    env.name = tpl
-    local out_file = iopen(tpl_out, "w")
-    if not out_file then
-        error(sformat("open template out file %s failed!", tpl_out))
-        return
-    end
-    local template, err, chunk = render(content, env)
+    local template, err, chunk = render(content, tpl_env)
     if not template then
         out_file:write(chunk)
         out_file:close()
-        error(sformat("render template file %s failed: %s", tpl, err))
+        error(sformat("render template file %s failed: %s", tpl_f, err))
         return
     end
     out_file:write(template)
     out_file:close()
-    print(sformat("render template file %s to %s success!", tpl, tpl_out))
-    return env
+    print(sformat("render template file %s to %s success!", tpl_f, tpl_out_f))
 end
 
 --工具用法
 if select("#", ...) == 3 then
-    render_file(...)
+    local tpl_f, tpl_out_f, tpl_var_f = select(1, )
+    render_file(tpl_f, tpl_out_f, {}, tpl_var_f)
 end
 
 return {
