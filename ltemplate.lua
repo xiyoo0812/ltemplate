@@ -208,7 +208,7 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
             out_file:write(chunk)
         end
         out_file:close()
-        error(sformat("render template file %s to %s failed!", tpl_f, tpl_out_f))
+        error(sformat("render template file %s to %s failed: %s!", tpl_f, tpl_out_f, template))
         return
     end
     out_file:write(template)
