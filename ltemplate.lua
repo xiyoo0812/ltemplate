@@ -1,5 +1,4 @@
 --ltemplate.lua
-local type          = type
 local ipairs        = ipairs
 local iopen         = io.open
 local tconcat       = table.concat
@@ -178,7 +177,7 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
     end
     local template_file = iopen(tpl_f, "rb")
     if not template_file then
-        error(sformat("open template file %s failed!", tpl))
+        error(sformat("open template file %s failed!", tpl_f))
         return
     end
     local content = template_file:read("*all")
@@ -195,7 +194,7 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
             error(sformat("load template variable file %s failed :%s", tpl_var_f, res))
             return
         end
-        tpl_env.name = tpl
+        tpl_env.name = tpl_f
     end
         local out_file = iopen(tpl_out_f, "w")
         if not out_file then
@@ -217,6 +216,9 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
 end
 
 --工具用法
+--tpl_f: 模板文件路径
+--tpl_out_f：输出文件路径
+--tpl_var_f：环境变量配置文件
 if select("#", ...) == 3 then
     local tpl_f, tpl_out_f, tpl_var_f = select(1, ...)
     render_file(tpl_f, tpl_out_f, {}, tpl_var_f)
