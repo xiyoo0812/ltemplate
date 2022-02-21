@@ -2,7 +2,6 @@
 local ipairs        = ipairs
 local iopen         = io.open
 local tconcat       = table.concat
-local tinsert       = table.insert
 local ssub          = string.sub
 local sfind         = string.find
 local sgsub         = string.gsub
@@ -59,7 +58,7 @@ end
 
 local function push_token(buffers, ...)
     for _, str in ipairs({...}) do
-        tinsert(buffers, str)
+        buffers[#buffers + 1] = str
     end
 end
 
@@ -91,7 +90,7 @@ local function push_chunk(chunks, kind, value)
             value = ssub(value, 2, #value)
         end
     end
-    tinsert(chunks, { kind, value })
+    chunks[#chunks + 1] = { kind, value }
 end
 
 local function next_tag(chunks, content, ppos)
