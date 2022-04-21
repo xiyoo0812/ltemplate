@@ -193,13 +193,13 @@ local function render_file(tpl_f, tpl_out_f, tpl_env, tpl_var_f)
             error(sformat("load template variable file %s failed :%s", tpl_var_f, res))
             return
         end
-        tpl_env.name = tpl_f
+        tpl_env.NAME = tpl_f
     end
-        local out_file = iopen(tpl_out_f, "w")
-        if not out_file then
-            error(sformat("open template out file %s failed!", tpl_out_f))
-            return
-        end
+    local out_file = iopen(tpl_out_f, "w")
+    if not out_file then
+        error(sformat("open template out file %s failed!", tpl_out_f))
+        return
+    end
     local ok, template, chunk = pcall(render, content, tpl_env)
     if not ok or not template then
         if chunk then
